@@ -100,9 +100,67 @@ function preencherSelectSalas(salas) {
             selectSala.appendChild(option);
         });
     }
-}
+};
+
+// Selecionar sala
+async function selecionarSala(sala, cardElement) {
+    salaSelecionada = sala;
+    document.querySelectorAll(".sala-card").forEach((card) => {
+        card.classList.remove("selecionada");
+    });
+    cardElement.classList.add("selecionada");
+
+    // Buscar agendamentos da sala
+    await buscarAgendamentosDaSala(sala.id);
+};
 
 // ========== FUNÇÕES DE AGENDAMENTOS ==========
+
+// Renderizar tabela de horários
+function renderizarTabelaHorarios(agendamentos) {
+    const tabelaHorarios = document.getElementById("tabelaHorarios");
+    const corpoTabela = document.getElementById("corpoTabelaHorarios");
+    const nenhumaSelecao = document.getElementById("nenhumaSelecao");
+    const salaInfo = document.getElementById("salaInfo");
+    const nomeSala = document.getElementById("nomeSalaSelecionada");
+
+    if (salaSelecionada) {
+        salaInfo.style.display = "block";
+        nomeSala.textContent = salaSelecionada.nome_sala;
+        tabelaHorarios.style.display = "table";
+        nenhumaSelecao.style.display = "none";
+
+        corpoTabela.innerHTML = "";
+
+        // Gerar horários de exemplo (8h às 18h)
+        for (let hora = 8; hora < 18; hora++) {
+            const horarioInicio = `${hora.toString().padStart(2, "0")}:00`;
+            const horarioFim = `${(hora + 1).toString().padStart(2, "0")}:00`;
+
+            // Verificar se há agendamento neste horário (lógica de sobreposição simplificada)
+            const agendado = agendamentos.some((agendamento) => {
+                const inicio = new Date(agendamento.data_hora_inicio);
+                const fim = new Date(agendamento.data_hora_fim);
+                const horaAtual = new Date();
+                horaAtual.setHours(hora, 0, 0, 0);
+                const proximaHora = new Date(horaAtual);
+                proximaHora.setHours(hora + 1, 0, 0, 0);
+
+                return (inicio < proximaHora) && (fim > horaAtual);
+            });
+
+            const status = agendado ? "Ocupado" : "Livre";
+            const statusClass = agendado ? "status-ocupado" : "status-livre";
+
+            const linha = document.createElement("tr");
+            linha.innerHTML = `
+        <td>${horarioInicio} - ${horarioFim}</td>
+        <td class="${statusClass}">${status}</td>
+      `;
+            corpoTabela.appendChild(linha);
+        }
+    }
+}
 
 // Buscar agendamentos de uma sala
 async function buscarAgendamentosDaSala(idSala) {
