@@ -102,6 +102,136 @@ function preencherSelectSalas(salas) {
     }
 }
 
+// ========== FUNÇÕES DE AGENDAMENTOS ==========
+
+// Buscar agendamentos de uma sala
+async function buscarAgendamentosDaSala(idSala) {
+    try {
+        const response = await fetch(`${API_URL}/agendamentos/sala/${idSala}`);
+        const agendamentos = await response.json();
+        renderizarTabelaHorarios(agendamentos);
+    } catch (error) {
+        console.error("Erro ao buscar agendamentos da sala:", error);
+    }
+};
+
+// Buscar agendamentos do usuário
+async function buscarAgendamentosUsuario() {
+    try {
+        const response = await fetch(
+            `${API_URL}/agendamentos/usuario/${usuarioLogado.id}`
+        );
+        const agendamentos = await response.json();
+        renderizarAgendamentosUsuario(agendamentos);
+    } catch (error) {
+        console.error("Erro ao buscar agendamentos do usuário:", error);
+    }
+};
+
+// Renderizar agendamentos do usuário
+function renderizarAgendamentosUsuario(agendamentos) {
+    const corpoAgendamentos = document.getElementById("corpoAgendamentos");
+    const nenhumAgendamento = document.getElementById("nenhumAgendamento");
+
+    if (agendamentos.length === 0) {
+        nenhumAgendamento.style.display = "block";
+        corpoAgendamentos.innerHTML = "";
+    } else {
+        nenhumAgendamento.style.display = "none";
+        corpoAgendamentos.innerHTML = "";
+
+        agendamentos.forEach((agendamento) => {
+            const linha = document.createElement("tr");
+            const statusClass =
+                agendamento.status === "cancelado"
+                    ? "status-cancelado"
+                    : "status-livre";
+            linha.innerHTML = `
+        <td>${agendamento.id_sala}</td>
+        <td>${new Date(agendamento.data_hora_inicio).toLocaleString("pt-BR")}</td>
+        <td>${new Date(agendamento.data_hora_fim).toLocaleString("pt-BR")}</td>
+        <td class="${statusClass}">${agendamento.status}</td>
+        <td>
+          ${agendamento.status === "confirmado"
+                    ? `<button class="btn-cancelar" data-id="${agendamento.id}">Cancelar</button>`
+                    : ""
+                }
+        </td>
+      `;
+            corpoAgendamentos.appendChild(linha);
+        });
+
+        // Adicionar listener aos botões de cancelar
+        document.querySelectorAll(".btn-cancelar").forEach(button => {
+            button.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                cancelarAgendamento(id);
+            });
+        });
+    }
+}
+
+// Criar agendamento
+async function criarAgendamento(dados) {
+    try {
+        const response = await fetch(`${API_URL}/agendamentos`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(dados),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            mostrarMensagem("Agendamento criado com sucesso!", "sucesso");
+            document.getElementById("formReserva").reset();
+            buscarAgendamentosUsuario();
+            if (salaSelecionada) {
+                buscarAgendamentosDaSala(salaSelecionada.id);
+            }
+        } else {
+            mostrarMensagem(data.message || "Erro ao criar agendamento", "erro");
+        }
+    } catch (error) {
+        console.error("Erro ao criar agendamento:", error);
+        mostrarMensagem("Erro ao conectar com o servidor", "erro");
+    }
+};
+
+// Cancelar agendamento
+async function cancelarAgendamento(idAgendamento) {
+    if (confirm("Tem certeza que deseja cancelar este agendamento?")) {
+        try {
+            const response = await fetch(
+                `${API_URL}/agendamentos/cancelar/${idAgendamento}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            const data = await response.json();
+
+            if (response.ok) {
+                mostrarMensagem("Agendamento cancelado com sucesso!", "sucesso");
+                buscarAgendamentosUsuario();
+                if (salaSelecionada) {
+                    buscarAgendamentosDaSala(salaSelecionada.id);
+                }
+            } else {
+                mostrarMensagem(data.message || "Erro ao cancelar agendamento", "erro");
+            }
+        } catch (error) {
+            console.error("Erro ao cancelar agendamento:", error);
+            mostrarMensagem("Erro ao conectar com o servidor", "erro");
+        }
+    }
+};
+
 // ========== FUNÇÕES AUXILIARES ==========
 
 // Mostrar erro
@@ -111,7 +241,19 @@ function mostrarErro(mensagem) {
         mensagemErro.textContent = mensagem;
         mensagemErro.style.display = "block";
     }
-}
+};
+
+function mostrarMensagem(mensagem, tipo) {
+    const mensagemReserva = document.getElementById("mensagemReserva");
+    if (mensagemReserva) {
+        mensagemReserva.textContent = mensagem;
+        mensagemReserva.className = `mensagem ${tipo}`;
+        mensagemReserva.style.display = "block";
+        setTimeout(() => {
+            mensagemReserva.style.display = "none";
+        }, 3000);
+    }
+};
 
 // ========== EVENT LISTENERS ==========
 
@@ -168,4 +310,3 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 });
-// 
