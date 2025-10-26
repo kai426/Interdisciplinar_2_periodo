@@ -3,6 +3,7 @@ const cors = require("cors");
 const app = express();
 
 const usuarioRoutes = require("./routes/usuarioRoutes");
+const salaRoutes = require("./routes/salaRoutes");
 
 const PORT = process.env.PORT || 3000;
 
@@ -12,6 +13,7 @@ app.use(cors());
 
 // Rotas
 app.use("/api/usuarios", usuarioRoutes);
+app.use("/api/salas", salaRoutes);
 
 // Endepoint de teste
 app.get("/", (req, res) => {

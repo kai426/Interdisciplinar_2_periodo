@@ -23,7 +23,12 @@ async function fazerLogin(email, senha) {
         if (response.ok) {
             usuarioLogado = data.usuario;
             localStorage.setItem("usuarioLogado", JSON.stringify(usuarioLogado));
-            window.location.href = "dashboard.html";
+            // Verifica o tipo de usuário para redirecionar
+            if (usuarioLogado.tipo === 'admin') {
+                window.location.href = "admin.html";
+            } else {
+                window.location.href = "dashboard.html";
+            }
         } else {
             mostrarErro(data.message || "Erro ao fazer login");
         }
@@ -31,7 +36,7 @@ async function fazerLogin(email, senha) {
         console.error("Erro ao fazer login:", error);
         mostrarErro("Erro ao conectar com o servidor");
     }
-};
+}
 
 // ========== FUNÇÕES AUXILIARES ==========
 
@@ -47,9 +52,15 @@ function mostrarErro(mensagem) {
 // ========== EVENT LISTENERS ==========
 
 // Login
-document.getElementById("loginForm").addEventListener("submit", (event) => {
-    event.preventDefault();
-    const email = document.getElementById("email").value;
-    const senha = document.getElementById("senha").value;
-    fazerLogin(email, senha);
+document.addEventListener("DOMContentLoaded", () => {
+    const loginForm = document.getElementById("loginForm");
+    if (loginForm) {
+        loginForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const email = document.getElementById("email").value;
+            const senha = document.getElementById("senha").value;
+            fazerLogin(email, senha);
+        });
+    }
 });
+// 
