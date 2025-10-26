@@ -32,13 +32,17 @@ function verificarLoginAdmin() {
 // Buscar todas as salas
 async function buscarSalas() {
     try {
+        console.log('Buscando salas...');
         const response = await fetch(`${API_URL}/salas`);
+        console.log('Resposta:', response);
         const salas = await response.json();
-        renderizarTabelaSalas(salas);
+        console.log('Salas recebidas:', salas);
+        renderizarListaSalas(salas);
+        preencherSelectSalas(salas);
     } catch (error) {
         console.error("Erro ao buscar salas:", error);
     }
-};
+}
 
 // Renderizar tabela de salas
 function renderizarTabelaSalas(salas) {

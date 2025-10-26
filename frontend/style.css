@@ -169,6 +169,41 @@ section h3 {
 }
 
 /* Lista de Salas */
+.lista-salas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.sala-card {
+    padding: 15px;
+    background-color: #f9f9f9;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.sala-card:hover {
+    border-color: #667eea;
+    background-color: #f0f0f0;
+}
+
+.sala-card.selecionada {
+    border-color: #667eea;
+    background-color: #e8eaf6;
+}
+
+.sala-card h3 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.sala-card p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #666;
+}
 
 /* Tabelas */
 table {
@@ -196,4 +231,9 @@ table td {
 
 table tbody tr:hover {
     background-color: #f9f9f9;
+}
+
+.tabela-horarios {
+    width: 100%;
+    margin-top: 15px;
 }
