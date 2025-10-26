@@ -8,6 +8,79 @@
     <script src="app.js" defer></script>
 </head>
 <body>
-    <div></div>
+    <div class="navbar">
+        <h1>Dashboard - Agendamento de Salas</h1>
+        <div class="user-info">
+            <span id="nomeUsuario"></span>
+            <button id="btnLogout" class="btn-logout">Sair</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Seção 1: Lista de Salas -->
+        <section class="section-salas">
+            <h2>Salas Disponíveis</h2>
+            <div id="listaSalas" class="lista-salas"></div>
+        </section>
+
+        <!-- Seção 2: Grade de Horários -->
+        <section class="section-horarios">
+            <h2>Horários da Sala Selecionada</h2>
+            <div id="salaInfo" style="display: none;">
+                <p><strong>Sala: </strong><span id="nomeSalaSelecionada"></span></p>
+            </div>
+            <table id="tabelaHorarios" class="tabela-horarios" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Horário</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabelaHorarios"></tbody>
+            </table>
+            <p id="nenhumaSelecao" class="info">Selecione uma sala para visualizar os horários.</p>
+        </section>
+
+        <!-- Seção 3: Formulário de Reserva -->
+        <section class="section-reserva">
+            <h2>Fazer Reserva</h2>
+            <form id="formReserva">
+                <div class="form-group">
+                    <label for="salaSelecionada">Sala:</label>
+                    <select id="salaSelecionada" name="sala" required>
+                        <option value="">Selecione uma sala</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="dataHoraInicio">Data e Hora de Início:</label>
+                    <input type="datetime-local" id="dataHoraInicio" name="dataHoraInicio" required>
+                </div>
+                <div class="form-group">
+                    <label for="dataHoraFim">Data e Hora de Fim:</label>
+                    <input type="datetime-local" id="dataHoraFim" name="dataHoraFim" required>
+                </div>
+                <button type="submit" class="btn-reserva">Reservar</button>
+            </form>
+            <p id="mensagemReserva" class="mensagem" style="display: none;"></p>
+        </section>
+
+        <!-- Seção 4: Meus Agendamentos -->
+        <section class="section-agendamentos">
+            <h2>Meus Agendamentos</h2>
+            <table class="tabela-agendamentos">
+                <thead>
+                    <tr>
+                        <th>Sala</th>
+                        <th>Data/Hora Início</th>
+                        <th>Data/Hora Fim</th>
+                        <th>Status</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoAgendamentos"></tbody>
+            </table>
+            <p id="nenhumAgendamento" class="info">Você não possui agendamentos.</p>
+        </section>
+    </div>
 </body>
 </html>
