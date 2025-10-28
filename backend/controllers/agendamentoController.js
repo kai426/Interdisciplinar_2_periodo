@@ -1,4 +1,5 @@
 const Agendamento = require("../models/Agendamento");
+const { ErroDisponibilidade, ErroValidacao } = require("../utils/erros");
 
 exports.listarAgendamentosSala = async (req, res) => {
     try {
@@ -34,9 +35,17 @@ exports.criarAgendamento = async (req, res) => {
         const novoAgendamento = await Agendamento.salvar(req.body);
         res.status(201).json({ message: "Agendamento criado com sucesso", agendamento: novoAgendamento });
     } catch (error) {
-        if (error.message === "Horário indisponível para esta sala.") {
-            return res.status(400).json({ message: error.message });
+
+        if (error instanceof ErroDisponibilidade) {
+            return res.status(error.statusCode || 409).json({ message: error.message });
         }
+        
+        if (error instanceof ErroValidacao) {
+            // 400 Bad Request (dados inválidos, ex: data fim antes do início)
+            return res.status(error.statusCode || 400).json({ message: error.message });
+        }
+
+        // Erro genérico
         res.status(500).json({ message: "Erro ao criar agendamento", error: error.message });
     }
 };

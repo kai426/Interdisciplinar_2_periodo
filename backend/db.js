@@ -7,7 +7,8 @@ const pool = mysql.createPool({
     database: 'agendamento_sala',
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    dateStrings: true
 });
 
 module.exports = pool;

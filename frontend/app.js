@@ -110,7 +110,6 @@ async function selecionarSala(sala, cardElement) {
     });
     cardElement.classList.add("selecionada");
 
-    // Buscar agendamentos da sala
     await buscarAgendamentosDaSala(sala.id);
 };
 
@@ -123,6 +122,9 @@ function renderizarTabelaHorarios(agendamentos) {
     const nenhumaSelecao = document.getElementById("nenhumaSelecao");
     const salaInfo = document.getElementById("salaInfo");
     const nomeSala = document.getElementById("nomeSalaSelecionada");
+    
+    // 1. Pega o input da data
+    const dataSelecionadaInput = document.getElementById("dataHorarios");
 
     if (salaSelecionada) {
         salaInfo.style.display = "block";
@@ -132,21 +134,35 @@ function renderizarTabelaHorarios(agendamentos) {
 
         corpoTabela.innerHTML = "";
 
+        // 2. Pega a data que o USUÁRIO SELECIONOU no calendário
+        // (Ex: "2025-10-29T00:00:00")
+        const dataSelecionada = new Date(dataSelecionadaInput.value + 'T00:00:00');
+
         // Gerar horários de exemplo (8h às 18h)
         for (let hora = 8; hora < 18; hora++) {
             const horarioInicio = `${hora.toString().padStart(2, "0")}:00`;
             const horarioFim = `${(hora + 1).toString().padStart(2, "0")}:00`;
 
-            // Verificar se há agendamento neste horário (lógica de sobreposição simplificada)
-            const agendado = agendamentos.some((agendamento) => {
-                const inicio = new Date(agendamento.data_hora_inicio);
-                const fim = new Date(agendamento.data_hora_fim);
-                const horaAtual = new Date();
-                horaAtual.setHours(hora, 0, 0, 0);
-                const proximaHora = new Date(horaAtual);
-                proximaHora.setHours(hora + 1, 0, 0, 0);
+            // 3. Cria os slots de início e fim baseados na DATA SELECIONADA
+            // (Esta é a parte crucial da correção)
+            const inicioSlot = new Date(dataSelecionada);
+            inicioSlot.setHours(hora, 0, 0, 0); // Ex: 29/10 @ 12:00
 
-                return (inicio < proximaHora) && (fim > horaAtual);
+            const fimSlot = new Date(dataSelecionada);
+            fimSlot.setHours(hora + 1, 0, 0, 0); // Ex: 29/10 @ 13:00
+
+            // 4. Verifica se algum agendamento (de qualquer dia)
+            //    se sobrepõe ao slot DESTE dia
+            const agendado = agendamentos.some((agendamento) => {
+                
+                // Converte as datas do agendamento para HORA LOCAL
+                const inicioAgendamento = new Date(agendamento.data_hora_inicio.replace(' ', 'T'));
+                const fimAgendamento = new Date(agendamento.data_hora_fim.replace(' ', 'T'));
+
+                // Lógica de sobreposição correta:
+                // O agendamento começa ANTES do FIM do slot E
+                // O agendamento termina DEPOIS do INÍCIO do slot
+                return (inicioAgendamento < fimSlot) && (fimAgendamento > inicioSlot);
             });
 
             const status = agendado ? "Ocupado" : "Livre";
@@ -167,6 +183,7 @@ async function buscarAgendamentosDaSala(idSala) {
     try {
         const response = await fetch(`${API_URL}/agendamentos/sala/${idSala}`);
         const agendamentos = await response.json();
+        console.log("Agendamentos recebidos do backend:", agendamentos);
         renderizarTabelaHorarios(agendamentos);
     } catch (error) {
         console.error("Erro ao buscar agendamentos da sala:", error);
@@ -245,10 +262,27 @@ async function criarAgendamento(dados) {
         if (response.ok) {
             mostrarMensagem("Agendamento criado com sucesso!", "sucesso");
             document.getElementById("formReserva").reset();
-            buscarAgendamentosUsuario();
-            if (salaSelecionada) {
-                buscarAgendamentosDaSala(salaSelecionada.id);
+            
+            // ATUALIZA A LISTA "MEUS AGENDAMENTOS"
+            buscarAgendamentosUsuario(); 
+            
+            // =========================================================
+            // INÍCIO DA CORREÇÃO
+            // =========================================================
+            
+            // Pega o ID da sala que foi usada no formulário
+            const idSalaAgendada = dados.id_sala; 
+
+            // Verifica se a sala agendada é a mesma que está
+            // sendo exibida na tabela de horários
+            if (salaSelecionada && salaSelecionada.id === idSalaAgendada) {
+                // Se for, atualiza a tabela
+                buscarAgendamentosDaSala(idSalaAgendada);
             }
+            // =========================================================
+            // FIM DA CORREÇÃO
+            // =========================================================
+
         } else {
             mostrarMensagem(data.message || "Erro ao criar agendamento", "erro");
         }
@@ -314,7 +348,6 @@ function mostrarMensagem(mensagem, tipo) {
 };
 
 // ========== EVENT LISTENERS ==========
-
 // Login
 document.addEventListener("DOMContentLoaded", () => {
     const loginForm = document.getElementById("loginForm");
@@ -336,6 +369,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
             buscarSalas();
             buscarAgendamentosUsuario();
+
+            // Pega o input de data e o novo botão
+            const dataHorariosInput = document.getElementById("dataHorarios");
+            const btnVerificarHorarios = document.getElementById("btnVerificarHorarios");
+
+            // Define a data de hoje como padrão
+            if (dataHorariosInput) {
+                dataHorariosInput.valueAsDate = new Date();
+            }
+
+            // =========================================================
+            // LÓGICA DO BOTÃO "VERIFICAR HORÁRIOS"
+            // =========================================================
+            if (btnVerificarHorarios) {
+                btnVerificarHorarios.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    // Mostra erro se nenhuma sala foi selecionada
+                    if (!salaSelecionada) {
+                        const msgHorarios = document.getElementById("mensagemHorarios");
+                        msgHorarios.textContent = "Por favor, selecione uma sala primeiro.";
+                        msgHorarios.className = "mensagem erro";
+                        msgHorarios.style.display = "block";
+                        setTimeout(() => { msgHorarios.style.display = "none"; }, 3000);
+                        return;
+                    }
+
+                    // Se uma sala estiver selecionada, busca os agendamentos
+                    buscarAgendamentosDaSala(salaSelecionada.id);
+                });
+            }
 
             // Formulário de reserva
             const formReserva = document.getElementById("formReserva");
