@@ -1,4 +1,5 @@
 const pool = require("../db");
+const { ErroDisponibilidade, ErroValidacao } = require("../utils/erros");
 
 class Agendamento {
     static async verificarDisponibilidade(id_sala, inicio, fim) {
@@ -15,25 +16,43 @@ class Agendamento {
                 [id_sala, fim, inicio, inicio, fim, inicio, fim]
             );
 
-            return rows.length === 0;
+            // Se encontrou algum agendamento conflitante, lança o erro customizado
+            if (rows.length > 0) {
+                throw new ErroDisponibilidade("Sala indisponível para o horário selecionado.");
+            }
+
+            // Se não encontrou, retorna true (disponível)
+            return true;
+
         } catch (error) {
             console.error("Erro ao verificar disponibilidade de agendamento:", error);
-            throw error;
+            // Se o erro for o que acabamos de lançar, repassa ele
+            if (error instanceof ErroDisponibilidade) {
+                throw error;
+            }
+            // Se for outro erro (ex: falha no DB), lança um erro genérico
+            throw new Error("Erro ao verificar disponibilidade de agendamento.");
         }
     }
 
     static async salvar(dados) {
         const { id_usuario, id_sala, data_hora_inicio, data_hora_fim } = dados;
 
-        const disponivel = await Agendamento.verificarDisponibilidade(
+        // Adicionar validação de datas
+        if (new Date(data_hora_fim) <= new Date(data_hora_inicio)) {
+            throw new ErroValidacao("A data/hora de fim deve ser posterior à data/hora de início.");
+        }
+
+        // A função verificarDisponibilidade agora retorna true ou lança um erro.
+        // Se lançar um erro, a execução do 'salvar' para aqui e vai para o 'catch' do controller.
+        await Agendamento.verificarDisponibilidade(
             id_sala,
             data_hora_inicio,
             data_hora_fim
         );
 
-        if (!disponivel) {
-            throw new Error("Sala indisponível para o horário selecionado.");
-        }
+        // Se não lançou erro, a sala está disponível.
+        // O bloco 'if (!disponivel)' não é mais necessário.
 
         try {
             const [result] = await pool.execute(

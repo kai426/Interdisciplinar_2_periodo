@@ -227,34 +227,74 @@ function mostrarMensagem(mensagem, tipo) {
 };
 
 // ========== EVENT LISTENERS ==========
+
+// Login
 document.addEventListener("DOMContentLoaded", () => {
-    // Verifica login e obtém dados do usuário
-    const user = verificarLoginAdmin();
+    const loginForm = document.getElementById("loginForm");
+    if (loginForm) {
+        loginForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const email = document.getElementById("email").value;
+            const senha = document.getElementById("senha").value;
+            fazerLogin(email, senha);
+        });
+    }
 
-    if (user) {
-        const nomeUsuarioElement = document.getElementById("nomeUsuario");
-        if (nomeUsuarioElement) {
-            nomeUsuarioElement.textContent = user.nome;
-        }
+    // 2. Lógica do Dashboard (dashboard.html)
+    const dashboardElement = document.getElementById("nomeUsuario");
+    if (dashboardElement && window.location.pathname.includes('dashboard.html')) {
+        const user = verificarLogin();
+        if (user) {
+            dashboardElement.textContent = user.nome;
 
-        buscarSalas();
-        buscarAgendamentos();
+            buscarSalas();
+            buscarAgendamentosUsuario();
 
-        // Formulário de sala (Criar/Editar)
-        const formSala = document.getElementById("formSala");
-        if (formSala) {
-            formSala.addEventListener("submit", (e) => {
-                e.preventDefault();
-                const nomeSala = document.getElementById("nomeSala").value;
-                const capacidadeSala = document.getElementById("capacidadeSala").value;
-                const descricaoSala = document.getElementById("descricaoSala").value;
+            // =========================================================
+            // INÍCIO DA LÓGICA DE ATUALIZAÇÃO DA DATA
+            // =========================================================
+            
+            const dataHorariosInput = document.getElementById("dataHorarios");
+            if (dataHorariosInput) {
+                // Define a data de hoje como padrão
+                dataHorariosInput.valueAsDate = new Date();
 
-                salvarSala({
-                    nome_sala: nomeSala,
-                    capacidade: parseInt(capacidadeSala),
-                    descricao: descricaoSala,
+                // Adiciona um listener para quando a data mudar
+                dataHorariosInput.addEventListener('change', () => {
+                    if (salaSelecionada) {
+                        // Se uma sala já estiver selecionada,
+                        // busca novamente os agendamentos para essa sala.
+                        buscarAgendamentosDaSala(salaSelecionada.id);
+                    }
                 });
-            });
+            }
+            // =========================================================
+            // FIM DA LÓGICA DE ATUALIZAÇÃO DA DATA
+            // =========================================================
+
+
+            // Formulário de reserva
+            const formReserva = document.getElementById("formReserva");
+            if (formReserva) {
+                formReserva.addEventListener("submit", (e) => {
+                    e.preventDefault();
+                    const idSala = document.getElementById("salaSelecionada").value;
+                    const dataHoraInicio = document.getElementById("dataHoraInicio").value;
+                    const dataHoraFim = document.getElementById("dataHoraFim").value;
+
+                    if (!idSala) {
+                        mostrarMensagem("Selecione uma sala", "erro");
+                        return;
+                    }
+
+                    criarAgendamento({
+                        id_usuario: usuarioLogado.id,
+                        id_sala: parseInt(idSala),
+                        data_hora_inicio: dataHoraInicio,
+                        data_hora_fim: dataHoraFim,
+                    });
+                });
+            }
         }
 
         // Logout
