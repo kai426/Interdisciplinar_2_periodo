@@ -275,3 +275,49 @@ table tbody tr:hover {
 .btn-cancelar:hover {
     background-color: #b71c1c;
 }
+
+.info {
+    padding: 15px;
+    background-color: #e3f2fd;
+    color: #1976d2;
+    border-radius: 4px;
+    text-align: center;
+    margin-top: 15px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .lista-salas {
+        grid-template-columns: 1fr;
+    }
+
+    .container {
+        margin: 15px auto;
+    }
+
+    section {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    table {
+        font-size: 12px;
+    }
+
+    table th,
+    table td {
+        padding: 8px;
+    }
+
+    .btn-cancelar,
+    .btn-editar,
+    .btn-excluir {
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+}
