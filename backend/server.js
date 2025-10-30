@@ -12,7 +12,19 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(express.json());
-app.use(cors());
+
+const whitelist = ['https://interdisciplinar-2-periodo.vercel.app/']; 
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (whitelist.indexOf(origin) !== -1 || !origin) {
+            // Permite a URL da whitelist e requisições sem 'origin' (ex: Postman)
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    }
+};
+app.use(cors(corsOptions));
 
 // Rotas
 app.use("/api/usuarios", usuarioRoutes);
