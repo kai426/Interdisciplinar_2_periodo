@@ -1,5 +1,5 @@
 // URL da API
-const API_URL = "https://api-agendamento-salas.onrender.com";
+const API_URL = "https://api-agendamento-salas.onrender.com/api";
 
 // Pega o formulário e a mensagem de erro
 const registroForm = document.getElementById("registroForm");
