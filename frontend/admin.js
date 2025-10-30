@@ -3,48 +3,86 @@ const API_URL = "http://localhost:3000/api";
 // Variáveis globais
 let usuarioLogado = null;
 
-// ========== FUNÇÕES DE AUTENTICAÇÃO ==========
+// ===============================================
+// NOVAS FUNÇÕES DE AUTENTICAÇÃO
+// ===============================================
 
-// Logout
+// Helper para pegar o token
+function getToken() {
+    return localStorage.getItem("token");
+}
+
+// Helper para criar os headers com o token
+function getAuthHeaders() {
+    const token = getToken();
+    return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+    };
+}
+
+// Helper para decodificar o token (de forma simples)
+function parseJwt(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null; // Token inválido
+    }
+}
+
+// Logout (Atualizado)
 function fazerLogout() {
-    localStorage.removeItem("usuarioLogado");
+    localStorage.removeItem("token");
     window.location.href = "index.html";
 };
 
-// Verificar se o usuário está logado e é admin
+// Verificar se o usuário está logado e é admin (Atualizado)
 function verificarLoginAdmin() {
-    const usuarioArmazenado = localStorage.getItem("usuarioLogado");
-    if (!usuarioArmazenado) {
+    const token = getToken();
+    if (!token) {
         window.location.href = "index.html";
         return null;
     }
+    
+    usuarioLogado = parseJwt(token);
 
-    usuarioLogado = JSON.parse(usuarioArmazenado);
-    if (usuarioLogado.tipo !== "admin") {
-        window.location.href = "dashboard.html";
+    // Se o token for inválido, expirado OU o usuário não for admin
+    if (!usuarioLogado || (usuarioLogado.exp * 1000) < Date.now() || usuarioLogado.tipo !== "admin") {
+        localStorage.removeItem("token");
+        window.location.href = "index.html"; // Redireciona para o login
         return null;
     }
 
     return usuarioLogado;
 }
 
+// ===============================================
+// FUNÇÕES DA API (Atualizadas com Headers)
+// ===============================================
+
 // ========== FUNÇÕES DE SALAS (CRUD) ==========
-// Buscar todas as salas
 async function buscarSalas() {
     try {
-        console.log('Buscando salas...');
-        const response = await fetch(`${API_URL}/salas`);
-        console.log('Resposta:', response);
+        const response = await fetch(`${API_URL}/salas`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Falha ao buscar salas');
         const salas = await response.json();
-        console.log('Salas recebidas:', salas);
-        renderizarListaSalas(salas);
-        preencherSelectSalas(salas);
+        // No admin.js, precisamos renderizar a TABELA, não os cards
+        renderizarTabelaSalas(salas);
     } catch (error) {
         console.error("Erro ao buscar salas:", error);
+        if (error.status === 401 || error.status === 403) fazerLogout();
     }
 }
 
-// Renderizar tabela de salas
+// Renderizar tabela de salas (Atualizado - Copiado do seu admin.js original)
 function renderizarTabelaSalas(salas) {
     const corpoSalas = document.getElementById("corpoSalas");
     corpoSalas.innerHTML = "";
@@ -72,7 +110,6 @@ function renderizarTabelaSalas(salas) {
             const capacidade = e.target.getAttribute('data-capacidade');
             const descricao = e.target.getAttribute('data-descricao');
 
-            // Simplesmente preenche o formulário para edição
             document.getElementById("formSala").setAttribute('data-editing-id', id);
             document.getElementById("nomeSala").value = nome;
             document.getElementById("capacidadeSala").value = capacidade;
@@ -86,7 +123,7 @@ function renderizarTabelaSalas(salas) {
     });
 };
 
-// Criar ou Editar Sala
+// Criar ou Editar Sala (Atualizado)
 async function salvarSala(dados) {
     const id = document.getElementById("formSala").getAttribute('data-editing-id');
     const method = id ? "PUT" : "POST";
@@ -95,9 +132,7 @@ async function salvarSala(dados) {
     try {
         const response = await fetch(endpoint, {
             method: method,
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(dados),
         });
 
@@ -110,7 +145,12 @@ async function salvarSala(dados) {
             document.querySelector("#formSala button").textContent = 'Adicionar Sala';
             buscarSalas();
         } else {
-            mostrarMensagem(data.message || `Erro ao ${id ? 'editar' : 'criar'} sala`, "erro");
+            // Mostra erros de validação
+            let msgErro = data.message || `Erro ao ${id ? 'editar' : 'criar'} sala`;
+            if (data.errors) {
+                msgErro = data.errors.map(e => e.msg).join(' ');
+            }
+            mostrarMensagem(msgErro, "erro");
         }
     } catch (error) {
         console.error(`Erro ao ${id ? 'editar' : 'criar'} sala:`, error);
@@ -118,12 +158,13 @@ async function salvarSala(dados) {
     }
 };
 
-// Excluir sala
+// Excluir sala (Atualizado)
 async function excluirSala(idSala) {
     if (confirm("Tem certeza que deseja excluir esta sala?")) {
         try {
             const response = await fetch(`${API_URL}/salas/${idSala}`, {
                 method: "DELETE",
+                headers: getAuthHeaders()
             });
 
             const data = await response.json();
@@ -143,18 +184,22 @@ async function excluirSala(idSala) {
 
 // ========== FUNÇÕES DE AGENDAMENTOS (TODOS) ==========
 
-// Buscar todos os agendamentos
+// Buscar todos os agendamentos (Atualizado)
 async function buscarAgendamentos() {
     try {
-        const response = await fetch(`${API_URL}/agendamentos`);
+        const response = await fetch(`${API_URL}/agendamentos`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Falha ao buscar agendamentos');
         const agendamentos = await response.json();
         renderizarTabelaAgendamentos(agendamentos);
     } catch (error) {
         console.error("Erro ao buscar agendamentos:", error);
+        if (error.status === 401 || error.status === 403) fazerLogout();
     }
 };
 
-// Renderizar tabela de agendamentos
+// Renderizar tabela de agendamentos (Atualizado - Copiado do seu admin.js original)
 function renderizarTabelaAgendamentos(agendamentos) {
     const corpoAgendamentos = document.getElementById("corpoAgendamentosAdmin");
     corpoAgendamentos.innerHTML = "";
@@ -162,12 +207,17 @@ function renderizarTabelaAgendamentos(agendamentos) {
     agendamentos.forEach((agendamento) => {
         const linha = document.createElement("tr");
         const statusClass = agendamento.status === "cancelado" ? "status-cancelado" : "status-livre";
+        
+        // Corrige a data (se 'dateStrings: true' estiver ativo)
+        const dataInicio = new Date(agendamento.data_hora_inicio.replace(' ', 'T')).toLocaleString("pt-BR");
+        const dataFim = new Date(agendamento.data_hora_fim.replace(' ', 'T')).toLocaleString("pt-BR");
+
         linha.innerHTML = `
             <td>${agendamento.id}</td>
             <td>${agendamento.nome_usuario}</td>
             <td>${agendamento.nome_sala}</td>
-            <td>${new Date(agendamento.data_hora_inicio).toLocaleString("pt-BR")}</td>
-            <td>${new Date(agendamento.data_hora_fim).toLocaleString("pt-BR")}</td>
+            <td>${dataInicio}</td>
+            <td>${dataFim}</td>
             <td class="${statusClass}">${agendamento.status}</td>
             <td>
                 ${agendamento.status === "confirmado" ? `<button class="btn-cancelar" data-id="${agendamento.id}">Cancelar</button>` : ""}
@@ -176,13 +226,12 @@ function renderizarTabelaAgendamentos(agendamentos) {
         corpoAgendamentos.appendChild(linha);
     });
 
-    // Adicionar listener aos botões de cancelar
     document.querySelectorAll("#corpoAgendamentosAdmin .btn-cancelar").forEach(button => {
         button.addEventListener('click', (e) => cancelarAgendamento(e.target.getAttribute('data-id')));
     });
 };
 
-// Cancelar agendamento (Admin)
+// Cancelar agendamento (Admin) (Atualizado)
 async function cancelarAgendamento(idAgendamento) {
     if (confirm("Tem certeza que deseja cancelar este agendamento?")) {
         try {
@@ -190,9 +239,7 @@ async function cancelarAgendamento(idAgendamento) {
                 `${API_URL}/agendamentos/cancelar/${idAgendamento}`,
                 {
                     method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: getAuthHeaders()
                 }
             );
 
@@ -212,8 +259,7 @@ async function cancelarAgendamento(idAgendamento) {
 }
 
 // ========== FUNÇÕES AUXILIARES ==========
-
-// Mostrar mensagem (para CRUD de Salas e Agendamentos)
+// (Copiado do seu admin.js original)
 function mostrarMensagem(mensagem, tipo) {
     const mensagemSala = document.getElementById("mensagemSala");
     if (mensagemSala) {
@@ -227,74 +273,36 @@ function mostrarMensagem(mensagem, tipo) {
 };
 
 // ========== EVENT LISTENERS ==========
-
-// Login
+// (Atualizado)
 document.addEventListener("DOMContentLoaded", () => {
-    const loginForm = document.getElementById("loginForm");
-    if (loginForm) {
-        loginForm.addEventListener("submit", (event) => {
-            event.preventDefault();
-            const email = document.getElementById("email").value;
-            const senha = document.getElementById("senha").value;
-            fazerLogin(email, senha);
-        });
-    }
+    // Verifica login e obtém dados do usuário
+    const user = verificarLoginAdmin();
 
-    // 2. Lógica do Dashboard (dashboard.html)
-    const dashboardElement = document.getElementById("nomeUsuario");
-    if (dashboardElement && window.location.pathname.includes('dashboard.html')) {
-        const user = verificarLogin();
-        if (user) {
-            dashboardElement.textContent = user.nome;
+    if (user) {
+        const nomeUsuarioElement = document.getElementById("nomeUsuario");
+        if (nomeUsuarioElement) {
+            nomeUsuarioElement.textContent = user.nome;
+        }
 
-            buscarSalas();
-            buscarAgendamentosUsuario();
+        // Busca dados iniciais (com token)
+        buscarSalas();
+        buscarAgendamentos();
 
-            // =========================================================
-            // INÍCIO DA LÓGICA DE ATUALIZAÇÃO DA DATA
-            // =========================================================
-            
-            const dataHorariosInput = document.getElementById("dataHorarios");
-            if (dataHorariosInput) {
-                // Define a data de hoje como padrão
-                dataHorariosInput.valueAsDate = new Date();
+        // Formulário de sala (Criar/Editar)
+        const formSala = document.getElementById("formSala");
+        if (formSala) {
+            formSala.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const nomeSala = document.getElementById("nomeSala").value;
+                const capacidadeSala = document.getElementById("capacidadeSala").value;
+                const descricaoSala = document.getElementById("descricaoSala").value;
 
-                // Adiciona um listener para quando a data mudar
-                dataHorariosInput.addEventListener('change', () => {
-                    if (salaSelecionada) {
-                        // Se uma sala já estiver selecionada,
-                        // busca novamente os agendamentos para essa sala.
-                        buscarAgendamentosDaSala(salaSelecionada.id);
-                    }
+                salvarSala({
+                    nome_sala: nomeSala,
+                    capacidade: parseInt(capacidadeSala),
+                    descricao: descricaoSala,
                 });
-            }
-            // =========================================================
-            // FIM DA LÓGICA DE ATUALIZAÇÃO DA DATA
-            // =========================================================
-
-
-            // Formulário de reserva
-            const formReserva = document.getElementById("formReserva");
-            if (formReserva) {
-                formReserva.addEventListener("submit", (e) => {
-                    e.preventDefault();
-                    const idSala = document.getElementById("salaSelecionada").value;
-                    const dataHoraInicio = document.getElementById("dataHoraInicio").value;
-                    const dataHoraFim = document.getElementById("dataHoraFim").value;
-
-                    if (!idSala) {
-                        mostrarMensagem("Selecione uma sala", "erro");
-                        return;
-                    }
-
-                    criarAgendamento({
-                        id_usuario: usuarioLogado.id,
-                        id_sala: parseInt(idSala),
-                        data_hora_inicio: dataHoraInicio,
-                        data_hora_fim: dataHoraFim,
-                    });
-                });
-            }
+            });
         }
 
         // Logout
