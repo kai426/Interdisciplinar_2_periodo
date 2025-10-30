@@ -4,7 +4,10 @@ USE agendamento_sala;
 
 CREATE TABLE usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(255) NOT NULL,
+    primeiro_nome VARCHAR(255) NOT NULL,
+    ultimo_nome VARCHAR(255) NOT NULL,
+    nascimento DATE,
+    genero VARCHAR(50),
     email VARCHAR(255) UNIQUE NOT NULL,
     senha VARCHAR(255) NOT NULL, 
     tipo ENUM('aluno', 'admin') DEFAULT 'aluno'

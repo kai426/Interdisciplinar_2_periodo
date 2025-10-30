@@ -74,14 +74,14 @@ async function fazerLogin(email, senha) {
 // Fazer logout (Atualizado)
 function fazerLogout() {
     localStorage.removeItem("token"); // Remove o token
-    window.location.href = "index.html";
+    window.location.href = "login.html";
 };
 
 // Verificar se o usuário está logado (Atualizado)
 function verificarLogin() {
     const token = getToken();
     if (!token) {
-        window.location.href = "index.html";
+        window.location.href = "login.html";
         return null;
     }
     
@@ -91,7 +91,7 @@ function verificarLogin() {
     // Verifica se o token é válido (simples)
     if (!usuarioLogado || (usuarioLogado.exp * 1000) < Date.now()) {
         localStorage.removeItem("token");
-        window.location.href = "index.html";
+        window.location.href = "login.html";
         return null;
     }
 
@@ -269,26 +269,45 @@ function renderizarAgendamentosUsuario(agendamentos) {
         nenhumAgendamento.style.display = "none";
         corpoAgendamentos.innerHTML = "";
 
+        const agora = new Date();
+
         agendamentos.forEach((agendamento) => {
             const linha = document.createElement("tr");
-            const statusClass =
-                agendamento.status === "cancelado"
-                    ? "status-cancelado"
-                    : "status-livre";
-            
-            // Corrige a data (se 'dateStrings: true' estiver ativo)
+
+            // Converte as datas (corrigindo o formato com 'T')
             const dataInicio = new Date(agendamento.data_hora_inicio.replace(' ', 'T')).toLocaleString("pt-BR");
-            const dataFim = new Date(agendamento.data_hora_fim.replace(' ', 'T')).toLocaleString("pt-BR");
+            const dataFimOriginal = new Date(agendamento.data_hora_fim.replace(' ', 'T'));
+            const dataFimFormatada = dataFimOriginal.toLocaleString("pt-BR");
+
+            let statusTexto = agendamento.status;
+            let statusClass = "";
+            let acaoBotao = ""; // Para o botão de cancelar
+
+            if (agendamento.status === "cancelado") {
+                statusTexto = "Cancelado";
+                statusClass = "status-cancelado";
+            } else if (agendamento.status === "confirmado") {
+                // Verifica se a data final já passou
+                if (dataFimOriginal < agora) {
+                    statusTexto = "Realizado";
+                    statusClass = "status-realizado";
+                    // Nenhum botão de ação
+                } else {
+                    statusTexto = "Confirmado";
+                    statusClass = "status-livre"; // (ou "status-confirmado" se preferir)
+                    // Só pode cancelar se o agendamento ainda não aconteceu
+                    acaoBotao = `<button class="btn-cancelar" data-id="${agendamento.id}">Cancelar</button>`;
+                }
+            }
+            // =========================================================
 
             linha.innerHTML = `
-        <td>${agendamento.id_sala}</td> <td>${dataInicio}</td>
-        <td>${dataFim}</td>
-        <td class="${statusClass}">${agendamento.status}</td>
+        <td>${agendamento.nome_sala}</td>
+        <td>${dataInicio}</td>
+        <td>${dataFimFormatada}</td>
+        <td class="${statusClass}">${statusTexto}</td>
         <td>
-          ${agendamento.status === "confirmado"
-                    ? `<button class="btn-cancelar" data-id="${agendamento.id}">Cancelar</button>`
-                    : ""
-                }
+          ${acaoBotao}
         </td>
       `;
             corpoAgendamentos.appendChild(linha);
@@ -405,7 +424,6 @@ function mostrarMensagem(mensagem, tipo) {
 // ========== EVENT LISTENERS ==========
 // (Atualizado)
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Lógica do Login (index.html)
     const loginForm = document.getElementById("loginForm");
     if (loginForm) {
         loginForm.addEventListener("submit", (event) => {
