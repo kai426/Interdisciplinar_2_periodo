@@ -1,5 +1,5 @@
 // Configuração da API
-const API_URL = "http://localhost:3000/api";
+const API_URL = "https://api-agendamento-salas.onrender.com";
 
 // Variáveis globais
 let usuarioLogado = null; // Agora será preenchido pelo token

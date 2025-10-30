@@ -1,5 +1,5 @@
 // URL da API
-const API_URL = "http://localhost:3000/api";
+const API_URL = "https://api-agendamento-salas.onrender.com";
 
 // Pega o formulário e a mensagem de erro
 const registroForm = document.getElementById("registroForm");
