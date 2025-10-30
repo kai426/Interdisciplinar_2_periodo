@@ -2,12 +2,43 @@
 const API_URL = "http://localhost:3000/api";
 
 // Variáveis globais
-let usuarioLogado = null;
+let usuarioLogado = null; // Agora será preenchido pelo token
 let salaSelecionada = null;
 
-// ========== FUNÇÕES DE AUTENTICAÇÃO ==========
+// ===============================================
+// NOVAS FUNÇÕES DE AUTENTICAÇÃO
+// ===============================================
 
-// Fazer login
+// Helper para pegar o token
+function getToken() {
+    return localStorage.getItem("token");
+}
+
+// Helper para criar os headers com o token
+function getAuthHeaders() {
+    const token = getToken();
+    return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+    };
+}
+
+// Helper para decodificar o token (de forma simples)
+function parseJwt(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null; // Token inválido
+    }
+}
+
+// Fazer login (Atualizado)
 async function fazerLogin(email, senha) {
     try {
         const response = await fetch(`${API_URL}/usuarios/login`, {
@@ -21,10 +52,12 @@ async function fazerLogin(email, senha) {
         const data = await response.json();
 
         if (response.ok) {
-            usuarioLogado = data.usuario;
-            localStorage.setItem("usuarioLogado", JSON.stringify(usuarioLogado));
-            // Verifica o tipo de usuário para redirecionar
-            if (usuarioLogado.tipo === 'admin') {
+            // Salva o TOKEN no localStorage
+            localStorage.setItem("token", data.token);
+            
+            // Decodifica o token para saber para onde redirecionar
+            const usuario = parseJwt(data.token);
+            if (usuario.tipo === 'admin') {
                 window.location.href = "admin.html";
             } else {
                 window.location.href = "dashboard.html";
@@ -38,36 +71,57 @@ async function fazerLogin(email, senha) {
     }
 };
 
-// Fazer logout
+// Fazer logout (Atualizado)
 function fazerLogout() {
-    localStorage.removeItem("usuarioLogado");
+    localStorage.removeItem("token"); // Remove o token
     window.location.href = "index.html";
 };
 
-// Verificar se o usuário está logado
+// Verificar se o usuário está logado (Atualizado)
 function verificarLogin() {
-    const usuarioArmazenado = localStorage.getItem("usuarioLogado");
-    if (!usuarioArmazenado) {
+    const token = getToken();
+    if (!token) {
         window.location.href = "index.html";
         return null;
     }
-    usuarioLogado = JSON.parse(usuarioArmazenado);
+    
+    // Decodifica o token para obter os dados do usuário
+    usuarioLogado = parseJwt(token);
+    
+    // Verifica se o token é válido (simples)
+    if (!usuarioLogado || (usuarioLogado.exp * 1000) < Date.now()) {
+        localStorage.removeItem("token");
+        window.location.href = "index.html";
+        return null;
+    }
+
     return usuarioLogado;
 };
+
+// ===============================================
+// FUNÇÕES DA API (Atualizadas com Headers)
+// ===============================================
 
 // ========== FUNÇÕES DE SALAS ==========
 async function buscarSalas() {
     try {
-        const response = await fetch(`${API_URL}/salas`);
+        // Adicionado headers de autenticação
+        const response = await fetch(`${API_URL}/salas`, {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) throw new Error('Falha ao buscar salas');
         const salas = await response.json();
         renderizarListaSalas(salas);
         preencherSelectSalas(salas);
     } catch (error) {
         console.error("Erro ao buscar salas:", error);
+        // Se o token for inválido, desloga
+        if (error.status === 401 || error.status === 403) fazerLogout();
     }
 }
 
-// Renderizar lista de salas
+// ... (renderizarListaSalas e preencherSelectSalas não mudam) ...
 function renderizarListaSalas(salas) {
     const listaSalas = document.getElementById("listaSalas");
     listaSalas.innerHTML = "";
@@ -87,8 +141,6 @@ function renderizarListaSalas(salas) {
         listaSalas.appendChild(salaCard);
     });
 };
-
-// Preencher select de salas
 function preencherSelectSalas(salas) {
     const selectSala = document.getElementById("salaSelecionada");
     if (selectSala) {
@@ -110,20 +162,27 @@ async function selecionarSala(sala, cardElement) {
     });
     cardElement.classList.add("selecionada");
 
+    // Adiciona o nome da sala ao h2
+    document.getElementById("nomeSalaSelecionada").textContent = sala.nome_sala;
+    document.getElementById("salaInfo").style.display = "block";
+    document.getElementById("nenhumaSelecao").style.display = "none";
+
+    // Mostra a tabela (mesmo que vazia)
+    document.getElementById("tabelaHorarios").style.display = "table";
+
+    // Agora, força a verificação (ou o usuário clica em "Verificar")
     await buscarAgendamentosDaSala(sala.id);
 };
 
 // ========== FUNÇÕES DE AGENDAMENTOS ==========
 
-// Renderizar tabela de horários
+// ... (renderizarTabelaHorarios não muda) ...
 function renderizarTabelaHorarios(agendamentos) {
     const tabelaHorarios = document.getElementById("tabelaHorarios");
     const corpoTabela = document.getElementById("corpoTabelaHorarios");
     const nenhumaSelecao = document.getElementById("nenhumaSelecao");
     const salaInfo = document.getElementById("salaInfo");
     const nomeSala = document.getElementById("nomeSalaSelecionada");
-    
-    // 1. Pega o input da data
     const dataSelecionadaInput = document.getElementById("dataHorarios");
 
     if (salaSelecionada) {
@@ -131,37 +190,20 @@ function renderizarTabelaHorarios(agendamentos) {
         nomeSala.textContent = salaSelecionada.nome_sala;
         tabelaHorarios.style.display = "table";
         nenhumaSelecao.style.display = "none";
-
         corpoTabela.innerHTML = "";
-
-        // 2. Pega a data que o USUÁRIO SELECIONOU no calendário
-        // (Ex: "2025-10-29T00:00:00")
         const dataSelecionada = new Date(dataSelecionadaInput.value + 'T00:00:00');
 
-        // Gerar horários de exemplo (8h às 18h)
         for (let hora = 8; hora < 18; hora++) {
             const horarioInicio = `${hora.toString().padStart(2, "0")}:00`;
             const horarioFim = `${(hora + 1).toString().padStart(2, "0")}:00`;
-
-            // 3. Cria os slots de início e fim baseados na DATA SELECIONADA
-            // (Esta é a parte crucial da correção)
             const inicioSlot = new Date(dataSelecionada);
-            inicioSlot.setHours(hora, 0, 0, 0); // Ex: 29/10 @ 12:00
-
+            inicioSlot.setHours(hora, 0, 0, 0);
             const fimSlot = new Date(dataSelecionada);
-            fimSlot.setHours(hora + 1, 0, 0, 0); // Ex: 29/10 @ 13:00
+            fimSlot.setHours(hora + 1, 0, 0, 0);
 
-            // 4. Verifica se algum agendamento (de qualquer dia)
-            //    se sobrepõe ao slot DESTE dia
             const agendado = agendamentos.some((agendamento) => {
-                
-                // Converte as datas do agendamento para HORA LOCAL
                 const inicioAgendamento = new Date(agendamento.data_hora_inicio.replace(' ', 'T'));
                 const fimAgendamento = new Date(agendamento.data_hora_fim.replace(' ', 'T'));
-
-                // Lógica de sobreposição correta:
-                // O agendamento começa ANTES do FIM do slot E
-                // O agendamento termina DEPOIS do INÍCIO do slot
                 return (inicioAgendamento < fimSlot) && (fimAgendamento > inicioSlot);
             });
 
@@ -178,32 +220,44 @@ function renderizarTabelaHorarios(agendamentos) {
     }
 }
 
-// Buscar agendamentos de uma sala
+// Buscar agendamentos de uma sala (Atualizado)
 async function buscarAgendamentosDaSala(idSala) {
     try {
-        const response = await fetch(`${API_URL}/agendamentos/sala/${idSala}`);
+        // Adicionado headers de autenticação
+        const response = await fetch(`${API_URL}/agendamentos/sala/${idSala}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) throw new Error('Falha ao buscar agendamentos da sala');
         const agendamentos = await response.json();
         console.log("Agendamentos recebidos do backend:", agendamentos);
         renderizarTabelaHorarios(agendamentos);
     } catch (error) {
         console.error("Erro ao buscar agendamentos da sala:", error);
+        if (error.status === 401 || error.status === 403) fazerLogout();
     }
 };
 
-// Buscar agendamentos do usuário
+// Buscar agendamentos do usuário (Atualizado)
 async function buscarAgendamentosUsuario() {
+    if (!usuarioLogado) return; // Garante que o usuário foi carregado
     try {
+        // Adicionado headers de autenticação
         const response = await fetch(
-            `${API_URL}/agendamentos/usuario/${usuarioLogado.id}`
+            `${API_URL}/agendamentos/usuario/${usuarioLogado.id}`, {
+                headers: getAuthHeaders()
+            }
         );
+        if (!response.ok) throw new Error('Falha ao buscar agendamentos do usuário');
         const agendamentos = await response.json();
         renderizarAgendamentosUsuario(agendamentos);
     } catch (error) {
         console.error("Erro ao buscar agendamentos do usuário:", error);
+        if (error.status === 401 || error.status === 403) fazerLogout();
     }
 };
 
-// Renderizar agendamentos do usuário
+// ... (renderizarAgendamentosUsuario não muda) ...
 function renderizarAgendamentosUsuario(agendamentos) {
     const corpoAgendamentos = document.getElementById("corpoAgendamentos");
     const nenhumAgendamento = document.getElementById("nenhumAgendamento");
@@ -221,10 +275,14 @@ function renderizarAgendamentosUsuario(agendamentos) {
                 agendamento.status === "cancelado"
                     ? "status-cancelado"
                     : "status-livre";
+            
+            // Corrige a data (se 'dateStrings: true' estiver ativo)
+            const dataInicio = new Date(agendamento.data_hora_inicio.replace(' ', 'T')).toLocaleString("pt-BR");
+            const dataFim = new Date(agendamento.data_hora_fim.replace(' ', 'T')).toLocaleString("pt-BR");
+
             linha.innerHTML = `
-        <td>${agendamento.id_sala}</td>
-        <td>${new Date(agendamento.data_hora_inicio).toLocaleString("pt-BR")}</td>
-        <td>${new Date(agendamento.data_hora_fim).toLocaleString("pt-BR")}</td>
+        <td>${agendamento.id_sala}</td> <td>${dataInicio}</td>
+        <td>${dataFim}</td>
         <td class="${statusClass}">${agendamento.status}</td>
         <td>
           ${agendamento.status === "confirmado"
@@ -246,14 +304,14 @@ function renderizarAgendamentosUsuario(agendamentos) {
     }
 }
 
-// Criar agendamento
+
+// Criar agendamento (Atualizado)
 async function criarAgendamento(dados) {
     try {
+        // Adicionado headers de autenticação
         const response = await fetch(`${API_URL}/agendamentos`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(dados),
         });
 
@@ -262,29 +320,19 @@ async function criarAgendamento(dados) {
         if (response.ok) {
             mostrarMensagem("Agendamento criado com sucesso!", "sucesso");
             document.getElementById("formReserva").reset();
+            buscarAgendamentosUsuario();
             
-            // ATUALIZA A LISTA "MEUS AGENDAMENTOS"
-            buscarAgendamentosUsuario(); 
-            
-            // =========================================================
-            // INÍCIO DA CORREÇÃO
-            // =========================================================
-            
-            // Pega o ID da sala que foi usada no formulário
-            const idSalaAgendada = dados.id_sala; 
-
-            // Verifica se a sala agendada é a mesma que está
-            // sendo exibida na tabela de horários
+            const idSalaAgendada = dados.id_sala;
             if (salaSelecionada && salaSelecionada.id === idSalaAgendada) {
-                // Se for, atualiza a tabela
                 buscarAgendamentosDaSala(idSalaAgendada);
             }
-            // =========================================================
-            // FIM DA CORREÇÃO
-            // =========================================================
-
         } else {
-            mostrarMensagem(data.message || "Erro ao criar agendamento", "erro");
+            // Mostra erros de validação do backend
+            let msgErro = data.message || "Erro ao criar agendamento";
+            if (data.errors) {
+                msgErro = data.errors.map(e => e.msg).join(' ');
+            }
+            mostrarMensagem(msgErro, "erro");
         }
     } catch (error) {
         console.error("Erro ao criar agendamento:", error);
@@ -292,17 +340,16 @@ async function criarAgendamento(dados) {
     }
 };
 
-// Cancelar agendamento
+// Cancelar agendamento (Atualizado)
 async function cancelarAgendamento(idAgendamento) {
     if (confirm("Tem certeza que deseja cancelar este agendamento?")) {
         try {
+            // Adicionado headers de autenticação
             const response = await fetch(
                 `${API_URL}/agendamentos/cancelar/${idAgendamento}`,
                 {
                     method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: getAuthHeaders(),
                 }
             );
 
@@ -326,7 +373,7 @@ async function cancelarAgendamento(idAgendamento) {
 
 // ========== FUNÇÕES AUXILIARES ==========
 
-// Mostrar erro
+// ... (mostrarErro e mostrarMensagem não mudam) ...
 function mostrarErro(mensagem) {
     const mensagemErro = document.getElementById("mensagemErro");
     if (mensagemErro) {
@@ -336,20 +383,29 @@ function mostrarErro(mensagem) {
 };
 
 function mostrarMensagem(mensagem, tipo) {
-    const mensagemReserva = document.getElementById("mensagemReserva");
-    if (mensagemReserva) {
-        mensagemReserva.textContent = mensagem;
-        mensagemReserva.className = `mensagem ${tipo}`;
-        mensagemReserva.style.display = "block";
+    // Tenta pegar a mensagem da reserva
+    let msgElement = document.getElementById("mensagemReserva");
+    
+    // Se não estiver na página de reserva, tenta pegar a de horários
+    if (!msgElement) {
+        msgElement = document.getElementById("mensagemHorarios");
+    }
+
+    if (msgElement) {
+        msgElement.textContent = mensagem;
+        msgElement.className = `mensagem ${tipo}`;
+        msgElement.style.display = "block";
         setTimeout(() => {
-            mensagemReserva.style.display = "none";
+            msgElement.style.display = "none";
         }, 3000);
     }
 };
 
+
 // ========== EVENT LISTENERS ==========
-// Login
+// (Atualizado)
 document.addEventListener("DOMContentLoaded", () => {
+    // 1. Lógica do Login (index.html)
     const loginForm = document.getElementById("loginForm");
     if (loginForm) {
         loginForm.addEventListener("submit", (event) => {
@@ -363,40 +419,31 @@ document.addEventListener("DOMContentLoaded", () => {
     // 2. Lógica do Dashboard (dashboard.html)
     const dashboardElement = document.getElementById("nomeUsuario");
     if (dashboardElement && window.location.pathname.includes('dashboard.html')) {
+        
+        // Verifica o login e pega os dados do usuário do token
         const user = verificarLogin();
+        
         if (user) {
             dashboardElement.textContent = user.nome;
 
+            // Busca os dados iniciais (agora com token)
             buscarSalas();
             buscarAgendamentosUsuario();
 
-            // Pega o input de data e o novo botão
             const dataHorariosInput = document.getElementById("dataHorarios");
             const btnVerificarHorarios = document.getElementById("btnVerificarHorarios");
 
-            // Define a data de hoje como padrão
             if (dataHorariosInput) {
                 dataHorariosInput.valueAsDate = new Date();
             }
 
-            // =========================================================
-            // LÓGICA DO BOTÃO "VERIFICAR HORÁRIOS"
-            // =========================================================
             if (btnVerificarHorarios) {
                 btnVerificarHorarios.addEventListener('click', (e) => {
                     e.preventDefault();
-                    
-                    // Mostra erro se nenhuma sala foi selecionada
                     if (!salaSelecionada) {
-                        const msgHorarios = document.getElementById("mensagemHorarios");
-                        msgHorarios.textContent = "Por favor, selecione uma sala primeiro.";
-                        msgHorarios.className = "mensagem erro";
-                        msgHorarios.style.display = "block";
-                        setTimeout(() => { msgHorarios.style.display = "none"; }, 3000);
+                        mostrarMensagem("Por favor, selecione uma sala primeiro.", "erro");
                         return;
                     }
-
-                    // Se uma sala estiver selecionada, busca os agendamentos
                     buscarAgendamentosDaSala(salaSelecionada.id);
                 });
             }
@@ -416,7 +463,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
 
                     criarAgendamento({
-                        id_usuario: usuarioLogado.id,
+                        id_usuario: usuarioLogado.id, // Pega o ID do usuário logado (do token)
                         id_sala: parseInt(idSala),
                         data_hora_inicio: dataHoraInicio,
                         data_hora_fim: dataHoraFim,
