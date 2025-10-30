@@ -7,18 +7,21 @@ class Usuario {
      * Cria um novo usuário com senha hasheada
      */
     static async registrar(dados) {
-        const { nome, email, senha, tipo = 'aluno' } = dados;
+        const { primeiro_nome, ultimo_nome, nascimento, genero, email, senha, tipo = 'aluno' } = dados;
 
         // Gera o hash da senha
         const salt = await bcrypt.genSalt(10);
         const hashSenha = await bcrypt.hash(senha, salt);
 
         try {
+            // Atualiza o SQL INSERT
             const [result] = await pool.execute(
-                "INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)",
-                [nome, email, hashSenha, tipo]
+                "INSERT INTO usuarios (primeiro_nome, ultimo_nome, nascimento, genero, email, senha, tipo) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [primeiro_nome, ultimo_nome, nascimento, genero, email, hashSenha, tipo]
             );
-            return { id: result.insertId, nome, email, tipo };
+            
+            // Retorna os dados essenciais
+            return { id: result.insertId, nome: primeiro_nome, email, tipo };
         } catch (error) {
             console.log("Erro ao registrar usuário:", error);
             // Trata erro de email duplicado
@@ -51,7 +54,9 @@ class Usuario {
 
             // 4. Se a senha for correta, retorna o usuário
             if (senhaCorreta) {
-                return usuario;
+                // Importante: Passa 'primeiro_nome' como 'nome' para o resto da aplicação
+                const { id, primeiro_nome, email, tipo } = usuario;
+                return { id, nome: primeiro_nome, email, tipo };
             }
             
             // 5. Se a senha estiver incorreta, retorna nulo
@@ -66,10 +71,12 @@ class Usuario {
     static async buscarPorId(id) {
         try {
             const [rows] = await pool.execute(
-                "SELECT * FROM usuarios WHERE id = ?",
+                "SELECT id, primeiro_nome, ultimo_nome, email, tipo FROM usuarios WHERE id = ?",
                 [id]
             );
-            return rows[0];
+            // Renomeia 'primeiro_nome' para 'nome' para consistência
+            const { primeiro_nome, ...rest } = rows[0];
+            return { nome: primeiro_nome, ...rest };
         } catch (error) {
             console.error("Erro ao buscar usuário por ID:", error);
             throw error;

@@ -3,27 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Agendamento de Salas - Login</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="app.js" defer></script>
+    <link rel="stylesheet" href="registro.css"> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <title>Criar conta</title>
 </head>
 <body>
-    <div class="container-login">
-        <div class="login-box">
-            <h1>Sistema de Agendamento de Salas</h1>
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="senha">Senha:</label>
-                    <input type="password" id="senha" name="senha" required>
-                </div>
-                <button type="submit" class="btn-login">Entrar</button>
-            </form>
-            <p id="mensagemErro" class="erro" style="display: none;"></p>
+    <main id="form_container">
+        <div id="form_header">
+            <h1 id="form_title">
+                Criar conta
+            </h1>
+            <a href="login.html" class="btn-default">
+                <i class="fa-solid fa-right-to-bracket"></i>
+                Fazer Login
+            </a>
         </div>
-    </div>
+        
+        <p id="mensagemErro" class="erro" style="display: none;"></p>
+
+        <form action="" id="registroForm">
+            <div id="input_container">
+                <div class="input-box">
+                    <label for="primeiro_nome" class="form-label">Primeiro nome</label>
+                    <div class="input-field">
+                        <input type="text" name="primeiro_nome" id="primeiro_nome" class="form-control" placeholder="Fulano" required>
+                        <i class="fa-regular fa-user"></i>
+                    </div>
+                </div>
+
+                <div class="input-box">
+                    <label for="ultimo_nome" class="form-label">Último nome</label>
+                    <div class="input-field">
+                        <input type="text" name="ultimo_nome" id="ultimo_nome" class="form-control" placeholder="De Tal" required>
+                        <i class="fa-regular fa-user"></i>
+                    </div>
+                </div>
+
+                <div class="input-box">
+                    <label for="nascimento" class="form-label">Nascimento</label>
+                    <div class="input-field">
+                        <input type="date" name="nascimento" id="nascimento" class="form-control">
+                    </div>
+                </div>
+
+                <div class="input-box">
+                    <label for="email" class="form-label">E-mail</label>
+                    <div class="input-field">
+                        <input type="email" name="email" id="email" class="form-control" placeholder="exemplo@gmail.com" required>
+                        <i class="fa-regular fa-envelope"></i>
+                    </div>
+                </div>
+
+                <div class="input-box">
+                    <label for="senha" class="form-label">Senha</label>
+                    <div class="input-field">
+                        <input type="password" name="senha" id="senha" class="form-control" placeholder="*******" required>
+                        <i class="fa-regular fa-eye-slash password-icon"></i>
+                    </div>
+                </div>
+
+                <div class="input-box">
+                    <label for="confirm_password" class="form-label">Confirmar senha</label>
+                    <div class="input-field">
+                        <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="*******" required>
+                        <i class="fa-regular fa-eye-slash password-icon"></i>
+                    </div>
+                </div>
+
+                <div class="radio-container">
+                    <label class="form-label">Gênero</label>
+                    <div id="gender_inputs">
+                        <div class="radio-box">
+                            <input type="radio" name="genero" id="female" class="form-control" value="feminino">
+                            <label for="female" class="form-label">Feminino</label>
+                        </div>
+                        <div class="radio-box">
+                            <input type="radio" name="genero" id="male" class="form-control" value="masculino">
+                            <label for="male" class="form-label">Masculino</label>
+                        </div>
+                        <div class="radio-box">
+                            <input type="radio" name="genero" id="other" class="form-control" value="outro">
+                            <label for="other" class="form-label">Outro</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-default">
+                <i class="fa-solid fa-check"></i>
+                Criar conta
+            </button>
+        </form>
+    </main>
+
+    <script src="registro-visual.js"></script>
+    <script src="registro.js"></script>
 </body>
 </html>

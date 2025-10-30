@@ -39,14 +39,14 @@ function parseJwt(token) {
 // Logout (Atualizado)
 function fazerLogout() {
     localStorage.removeItem("token");
-    window.location.href = "index.html";
+    window.location.href = "login.html";
 };
 
 // Verificar se o usuário está logado e é admin (Atualizado)
 function verificarLoginAdmin() {
     const token = getToken();
     if (!token) {
-        window.location.href = "index.html";
+        window.location.href = "login.html";
         return null;
     }
     
@@ -55,7 +55,7 @@ function verificarLoginAdmin() {
     // Se o token for inválido, expirado OU o usuário não for admin
     if (!usuarioLogado || (usuarioLogado.exp * 1000) < Date.now() || usuarioLogado.tipo !== "admin") {
         localStorage.removeItem("token");
-        window.location.href = "index.html"; // Redireciona para o login
+        window.location.href = "login.html"; // Redireciona para o login
         return null;
     }
 
@@ -204,28 +204,53 @@ function renderizarTabelaAgendamentos(agendamentos) {
     const corpoAgendamentos = document.getElementById("corpoAgendamentosAdmin");
     corpoAgendamentos.innerHTML = "";
 
+    const agora = new Date();
+
     agendamentos.forEach((agendamento) => {
         const linha = document.createElement("tr");
-        const statusClass = agendamento.status === "cancelado" ? "status-cancelado" : "status-livre";
         
-        // Corrige a data (se 'dateStrings: true' estiver ativo)
+        // Converte as datas (corrigindo o formato com 'T')
         const dataInicio = new Date(agendamento.data_hora_inicio.replace(' ', 'T')).toLocaleString("pt-BR");
-        const dataFim = new Date(agendamento.data_hora_fim.replace(' ', 'T')).toLocaleString("pt-BR");
+        const dataFimOriginal = new Date(agendamento.data_hora_fim.replace(' ', 'T'));
+        const dataFimFormatada = dataFimOriginal.toLocaleString("pt-BR");
+
+        let statusTexto = agendamento.status;
+        let statusClass = "";
+        let acaoBotao = ""; // Para o botão de cancelar
+
+        if (agendamento.status === "cancelado") {
+            statusTexto = "Cancelado";
+            statusClass = "status-cancelado";
+        } else if (agendamento.status === "confirmado") {
+            // Verifica se a data final já passou
+            if (dataFimOriginal < agora) {
+                statusTexto = "Realizado";
+                statusClass = "status-realizado";
+                // Nenhum botão de ação
+            } else {
+                statusTexto = "Confirmado";
+                statusClass = "status-livre"; 
+                // Admin pode cancelar agendamentos futuros
+                acaoBotao = `<button class="btn-cancelar" data-id="${agendamento.id}">Cancelar</button>`;
+            }
+        }
+        // =========================================================
 
         linha.innerHTML = `
             <td>${agendamento.id}</td>
             <td>${agendamento.nome_usuario}</td>
             <td>${agendamento.nome_sala}</td>
             <td>${dataInicio}</td>
-            <td>${dataFim}</td>
-            <td class="${statusClass}">${agendamento.status}</td>
+            <td>${dataFimFormatada}</td>
+            <td class="${statusClass}">${statusTexto}</td>
             <td>
-                ${agendamento.status === "confirmado" ? `<button class="btn-cancelar" data-id="${agendamento.id}">Cancelar</button>` : ""}
+                ${acaoBotao}
             </td>
         `;
         corpoAgendamentos.appendChild(linha);
     });
 
+    // Adicionar listener aos botões de cancelar
     document.querySelectorAll("#corpoAgendamentosAdmin .btn-cancelar").forEach(button => {
         button.addEventListener('click', (e) => cancelarAgendamento(e.target.getAttribute('data-id')));
     });

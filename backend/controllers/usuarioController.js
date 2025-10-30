@@ -3,10 +3,11 @@ const jwt = require("jsonwebtoken");
 
 // Função para gerar o token JWT
 function gerarToken(usuario) {
+    // O 'usuario.nome' agora vem do model como 'primeiro_nome'
     return jwt.sign(
         { 
             id: usuario.id, 
-            nome: usuario.nome, 
+            nome: usuario.nome, // <-- Já é o primeiro_nome
             email: usuario.email, 
             tipo: usuario.tipo 
         },
