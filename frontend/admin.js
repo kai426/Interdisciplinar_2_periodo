@@ -1,4 +1,4 @@
-const API_URL = "https://api-agendamento-salas.onrender.com/api";
+const API_URL = "https://interdisciplinar2periodo-production.up.railway.app/api";
 
 // Variáveis globais
 let usuarioLogado = null;
