@@ -1,4 +1,5 @@
 const Sala = require("../models/Sala");
+const { ErroValidacao } = require("../utils/erros");
 
 exports.listarSalas = async (req, res) => {
     try {
@@ -34,6 +35,9 @@ exports.excluirSala = async (req, res) => {
         const resultado = await Sala.excluir(id);
         res.status(200).json(resultado);
     } catch (error) {
+        if (error instanceof ErroValidacao) {
+            return res.status(409).json({ message: error.message });
+        }
         res.status(500).json({ message: "Erro ao excluir sala", error: error.message });
     }
 };

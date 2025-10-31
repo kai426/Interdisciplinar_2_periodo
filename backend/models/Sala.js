@@ -1,4 +1,5 @@
 const pool = require("../db");
+const { ErroValidacao } = require("../utils/erros");
 
 class Sala {
     static async cadastrar(dados) {
@@ -32,7 +33,17 @@ class Sala {
 
     static async excluir(id) {
         try {
+            const [agendamentos] = await pool.execute(
+                "SELECT id FROM agendamentos WHERE id_sala = ?",
+                [id]
+            );
+
+            if (agendamentos.length > 0) {
+                throw new ErroValidacao("Esta sala não pode ser excluída, pois possui agendamentos associados.");
+            }
+
             await pool.execute("DELETE FROM salas WHERE id = ?", [id]);
+
             return { message: "Sala excluida com sucesso." };
         } catch (error) {
             console.error("Erro ao excluir sala:", error);
