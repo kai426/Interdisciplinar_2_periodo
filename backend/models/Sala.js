@@ -3,12 +3,13 @@ const { ErroValidacao } = require("../utils/erros");
 
 class Sala {
     static async cadastrar(dados) {
-        const { nome_sala, capacidade, descricao } = dados;
+        // Adicione categoria na desestruturação
+        const { nome_sala, capacidade, descricao, categoria } = dados;
 
         try {
             const [result] = await pool.execute(
-                "INSERT INTO salas (nome_sala, capacidade, descricao) VALUES (?, ?, ?)",
-                [nome_sala, capacidade, descricao]
+                "INSERT INTO salas (nome_sala, capacidade, descricao, categoria) VALUES (?, ?, ?, ?)",
+                [nome_sala, capacidade, descricao, categoria]
             );
             return { id: result.insertId, ...dados };
         } catch (error) {
@@ -18,11 +19,13 @@ class Sala {
     }
 
     static async editar(id, dados) {
-        const { nome_sala, capacidade, descricao } = dados;
+        // Adicione categoria na desestruturação
+        const { nome_sala, capacidade, descricao, categoria } = dados;
         try {
             await pool.execute(
-                "UPDATE salas SET nome_sala = ?, capacidade = ?, descricao = ? WHERE id = ?",
-                [nome_sala, capacidade, descricao, id]
+                // Adicione categoria no UPDATE
+                "UPDATE salas SET nome_sala = ?, capacidade = ?, descricao = ?, categoria = ? WHERE id = ?",
+                [nome_sala, capacidade, descricao, categoria, id]
             );
             return { id, ...dados };
         } catch (error) {
