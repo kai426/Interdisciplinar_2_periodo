@@ -26,7 +26,7 @@ function parseJwt(token) {
     try {
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
 
@@ -49,7 +49,7 @@ function verificarLoginAdmin() {
         window.location.href = "login.html";
         return null;
     }
-    
+
     usuarioLogado = parseJwt(token);
 
     // Se o token for inválido, expirado OU o usuário não for admin
@@ -85,6 +85,7 @@ async function buscarSalas() {
 // Renderizar tabela de salas (Atualizado - Copiado do seu admin.js original)
 function renderizarTabelaSalas(salas) {
     const corpoSalas = document.getElementById("corpoSalas");
+
     corpoSalas.innerHTML = "";
 
     salas.forEach((sala) => {
@@ -94,9 +95,23 @@ function renderizarTabelaSalas(salas) {
             <td>${sala.nome_sala}</td>
             <td>${sala.capacidade}</td>
             <td>${sala.descricao || "-"}</td>
-            <td>
-                <button class="btn-editar" data-id="${sala.id}" data-nome="${sala.nome_sala}" data-capacidade="${sala.capacidade}" data-descricao="${sala.descricao || ''}">Editar</button>
-                <button class="btn-excluir" data-id="${sala.id}">Excluir</button>
+            <td>${sala.categoria || "-"}</td> 
+            <td class="coluna-acoes">
+                <button class="btn-icon btn-editar-icon btn-editar" 
+                    title="Editar"
+                    data-id="${sala.id}" 
+                    data-nome="${sala.nome_sala}" 
+                    data-capacidade="${sala.capacidade}" 
+                    data-descricao="${sala.descricao || ''}"
+                    data-categoria="${sala.categoria || ''}">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+
+                <button class="btn-icon btn-excluir-icon btn-excluir" 
+                    title="Excluir"
+                    data-id="${sala.id}">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
             </td>
         `;
         corpoSalas.appendChild(linha);
@@ -105,21 +120,32 @@ function renderizarTabelaSalas(salas) {
     // Adicionar listeners aos botões de ação
     document.querySelectorAll("#corpoSalas .btn-editar").forEach(button => {
         button.addEventListener('click', (e) => {
-            const id = e.target.getAttribute('data-id');
-            const nome = e.target.getAttribute('data-nome');
-            const capacidade = e.target.getAttribute('data-capacidade');
-            const descricao = e.target.getAttribute('data-descricao');
+            // Usamos closest('button') para garantir que pegamos o botão mesmo clicando no ícone <i>
+            const btn = e.target.closest('button');
+            
+            const id = btn.getAttribute('data-id');
+            const nome = btn.getAttribute('data-nome');
+            const capacidade = btn.getAttribute('data-capacidade');
+            const descricao = btn.getAttribute('data-descricao');
+            const categoria = btn.getAttribute('data-categoria'); // Pegamos a categoria AQUI
 
             document.getElementById("formSala").setAttribute('data-editing-id', id);
             document.getElementById("nomeSala").value = nome;
             document.getElementById("capacidadeSala").value = capacidade;
             document.getElementById("descricaoSala").value = descricao;
+            
+            // Preenchemos o select de categoria AQUI
+            document.getElementById("categoriaSala").value = categoria; 
+
             document.querySelector("#formSala button").textContent = 'Salvar Edição';
         });
     });
 
     document.querySelectorAll("#corpoSalas .btn-excluir").forEach(button => {
-        button.addEventListener('click', (e) => excluirSala(e.target.getAttribute('data-id')));
+        button.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            excluirSala(btn.getAttribute('data-id'));
+        });
     });
 };
 
@@ -208,7 +234,7 @@ function renderizarTabelaAgendamentos(agendamentos) {
 
     agendamentos.forEach((agendamento) => {
         const linha = document.createElement("tr");
-        
+
         // Converte as datas (corrigindo o formato com 'T')
         const dataInicio = new Date(agendamento.data_hora_inicio.replace(' ', 'T')).toLocaleString("pt-BR");
         const dataFimOriginal = new Date(agendamento.data_hora_fim.replace(' ', 'T'));
@@ -229,7 +255,7 @@ function renderizarTabelaAgendamentos(agendamentos) {
                 // Nenhum botão de ação
             } else {
                 statusTexto = "Confirmado";
-                statusClass = "status-livre"; 
+                statusClass = "status-livre";
                 // Admin pode cancelar agendamentos futuros
                 acaoBotao = `<button class="btn-cancelar" data-id="${agendamento.id}">Cancelar</button>`;
             }
@@ -321,11 +347,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 const nomeSala = document.getElementById("nomeSala").value;
                 const capacidadeSala = document.getElementById("capacidadeSala").value;
                 const descricaoSala = document.getElementById("descricaoSala").value;
+                const categoriaSala = document.getElementById("categoriaSala").value;
 
                 salvarSala({
                     nome_sala: nomeSala,
                     capacidade: parseInt(capacidadeSala),
                     descricao: descricaoSala,
+                    categoria: categoriaSala
                 });
             });
         }

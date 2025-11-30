@@ -21,6 +21,19 @@
     <div class="container">
         <section class="section-salas">
             <h2>Salas Disponíveis</h2>
+
+            <div class="filtros-container" style="margin-bottom: 20px;">
+                <label for="filtroCategoria" style="font-weight: 500; margin-right: 10px;">Filtrar por Categoria:</label>
+                <select id="filtroCategoria" onchange="filtrarSalas()" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+                    <option value="todas">Todas</option>
+                    <option value="Sala de Aula">Sala de Aula</option>
+                    <option value="Laboratório">Laboratório</option>
+                    <option value="Auditório">Auditório</option>
+                    <option value="Reunião">Reunião</option>
+                    <option value="Outros">Outros</option>
+                </select>
+            </div>
+
             <div id="listaSalas" class="lista-salas"></div>
         </section>
 

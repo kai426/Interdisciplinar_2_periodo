@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Sistema de Agendamento de Salas</title>
+    
     <link rel="stylesheet" href="style.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
     <script src="admin.js" defer></script>
 </head>
 <body>
@@ -17,7 +21,6 @@
     </div>
 
     <div class="container">
-        <!-- Seção 1: Gerenciar Salas -->
         <section class="section-admin">
             <h2>Gerenciar Salas</h2>
             <form id="formSala">
@@ -29,6 +32,18 @@
                 <div class="form-group">
                     <label for="capacidadeSala">Capacidade:</label>
                     <input type="number" id="capacidadeSala" name="capacidadeSala" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="categoriaSala">Categoria:</label>
+                    <select id="categoriaSala" name="categoriaSala" required>
+                        <option value="">Selecione...</option>
+                        <option value="Sala de Aula">Sala de Aula</option>
+                        <option value="Laboratório">Laboratório</option>
+                        <option value="Auditório">Auditório</option>
+                        <option value="Reunião">Reunião</option>
+                        <option value="Outros">Outros</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -48,14 +63,13 @@
                         <th>Nome</th>
                         <th>Capacidade</th>
                         <th>Descrição</th>
-                        <th>Ação</th>
+                        <th>Categoria</th> <th>Ação</th>
                     </tr>
                 </thead>
                 <tbody id="corpoSalas"></tbody>
             </table>
         </section>
 
-        <!-- Seção 2: Visualizar Todos os Agendamentos -->
         <section class="section-admin">
             <h2>Todos os Agendamentos</h2>
             <div class="tabela-wrapper">

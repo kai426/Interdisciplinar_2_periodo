@@ -22,6 +22,10 @@ const validarSala = [
     body('descricao')
         .optional({ checkFalsy: true })
         .isString().withMessage('A descrição deve ser um texto.'),
+    tratarErrosValidacao,
+    body('categoria')
+        .optional
+        .isString().withMessage('A categoria deve ser um texto.'),
     tratarErrosValidacao
 ];
 
